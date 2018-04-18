@@ -1,0 +1,46 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+namespace HFDMwithCSharpByHarryZhang
+{
+	public partial class Form_CollaborativeNotepad:
+	Form
+	{
+		OAuth2TwoLeggedRequests twoLeggedRequests;
+		private void tabPage3_Enter(object sender,EventArgs e)
+		{
+			if(null==twoLeggedRequests)
+			{
+				twoLeggedRequests=new OAuth2TwoLeggedRequests(apigeeHostUrl,clientId,clientSecret,scope,sessionLogger);
+			}
+			setTitleWithAdditionalInformation(apigeeHostUrl);
+		}
+		private void button_CreateBucket_Click(object sender,EventArgs e)
+		{
+			PrependUiLogger(twoLeggedRequests.CreateBucket(textBox_CreateBucket_BucketKey.Text));
+		}
+		private void button_GetBucketDetails_Click(object sender,EventArgs e)
+		{
+			PrependUiLogger(twoLeggedRequests.GetBucketDetails(textBox_GetBucketDetails_BucketKey.Text));
+		}
+		private void button_GetBucketObjects_Click(object sender,EventArgs e)
+		{
+			PrependUiLogger(twoLeggedRequests.GetBucketObjects(textBox_GetBucketObjects_BucketKey.Text));
+		}
+		private void button_UploadFile_Click(object sender,EventArgs e)
+		{
+			PrependUiLogger(twoLeggedRequests.UploadFile(textBox_UploadFile_BucketKey.Text,textBox_UploadFile_FilePath.Text));
+		}
+		private void button_PostJob_Click(object sender,EventArgs e)
+		{
+			PrependUiLogger(twoLeggedRequests.PostJob(textBox_PostJob_ObjectId.Text.ToUrlSafeBase64()));
+		}
+		private void button_GetJobManifest_Click(object sender,EventArgs e)
+		{
+			PrependUiLogger(twoLeggedRequests.GetJobManifest(textBox_GetJobManifest_ObjectId.Text.ToUrlSafeBase64()));
+		}
+	}
+}
