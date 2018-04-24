@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Linq;
 namespace HFDMwithCSharpByHarryZhang
 {
 	public partial class Form_CollaborativeNotepad:
-	Form
+	System.Windows.Forms.Form
 	{
 		class PropertySetsServerUrl
 		{
@@ -63,9 +58,9 @@ namespace HFDMwithCSharpByHarryZhang
 			}
 		};
 		PropertySetsServerUrl currentPropertySetsServerUrl;
-		private void comboBox_PropertySetsServerUrls_SelectedIndexChanged(object sender,EventArgs e)
+		private void comboBox_PropertySetsServerUrls_SelectedIndexChanged(object sender,System.EventArgs e)
 		{
-			currentPropertySetsServerUrl=(sender as ComboBox).SelectedItem as PropertySetsServerUrl;
+			currentPropertySetsServerUrl=(sender as System.Windows.Forms.ComboBox).SelectedItem as PropertySetsServerUrl;
 			button_Connect.Enabled=true;
 		}
 		private void initialize_ComboBox_PropertySetsServerUrls()

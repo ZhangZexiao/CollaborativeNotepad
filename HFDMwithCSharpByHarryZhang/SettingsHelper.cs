@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-namespace HFDMwithCSharpByHarryZhang
+﻿namespace HFDMwithCSharpByHarryZhang
 {
 	public partial class Form_CollaborativeNotepad:
-	Form
+	System.Windows.Forms.Form
 	{
 		string clientId="PC4fujKFEJIT2XsBvKyUhG3oBAHXfxKW";
 		string clientSecret="GAO7oBn9KJeaDmNu";
@@ -37,7 +31,7 @@ namespace HFDMwithCSharpByHarryZhang
 		{
 			return!(clientId==comboBox_ClientId.Text&&clientSecret==comboBox_ClientSecret.Text&&scope==comboBox_Scope.Text&&apigeeHostUrl==comboBox_ApigeeHostUrls.Text&&redirectUrl==comboBox_RedirectUrl.Text);
 		}
-		private void tabPage5_Leave(object sender,EventArgs e)
+		private void tabPage5_Leave(object sender,System.EventArgs e)
 		{
 			if(isSettingsChanged())
 			{

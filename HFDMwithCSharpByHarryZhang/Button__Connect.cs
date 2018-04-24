@@ -1,20 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-namespace HFDMwithCSharpByHarryZhang
+﻿namespace HFDMwithCSharpByHarryZhang
 {
 	public partial class Form_CollaborativeNotepad:
-	Form
+	System.Windows.Forms.Form
 	{
-		private bool createHfdmWorkspace(ref Lynx.PropertySets.HFDM hfdm,ref Lynx.PropertySets.Workspace workspace,PropertySetsServerUrl propertySetsServerUrl,Func<string>getBearerToken)
+		private bool createHfdmWorkspace(ref Lynx.PropertySets.HFDM hfdm,ref Lynx.PropertySets.Workspace workspace,PropertySetsServerUrl propertySetsServerUrl,System.Func<string>getBearerToken)
 		{
 			sessionLogger.Log("create hfdm and workspace: "+propertySetsServerUrl.ToString());
 			hfdm=LynxPropertySetsCSharp.CreateHFDM();
-			using(var eventWaitHandle=new EventWaitHandle(false,EventResetMode.ManualReset))
+			using(var eventWaitHandle=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.ManualReset))
 			{
 				hfdm.connect(propertySetsServerUrl.url,(error)=>{if(error!=null){sessionLogger.Log("error: "+error.what());}eventWaitHandle.Set();},getBearerToken);
 				eventWaitHandle.WaitOne();
@@ -30,8 +23,8 @@ namespace HFDMwithCSharpByHarryZhang
 		{
 			if(currentPropertySetsServerUrl.isBearerTokenRequired.GetValueOrDefault(true))
 			{
-				threeLeggedBearerTokenAgent=new OAuth2ThreeLeggedBearerTokenAgent(sessionLogger).CreateThreeLeggedBearerTokenAgent(apigeeHostUrl,clientId,clientSecret,scope,redirectUrl);
-				return createHfdmWorkspace(ref hfdm,ref workspace,currentPropertySetsServerUrl,threeLeggedBearerTokenAgent.getBearerToken);
+				threeLeggedBearerTokenAgent=new OAuth2ThreeLeggedBearerTokenAgent(apigeeHostUrl,clientId,clientSecret,scope,redirectUrl,sessionLogger);
+				return createHfdmWorkspace(ref hfdm,ref workspace,currentPropertySetsServerUrl,threeLeggedBearerTokenAgent.GetBearerToken);
 			}
 			else
 			{
@@ -60,7 +53,7 @@ namespace HFDMwithCSharpByHarryZhang
 			}
 			return true;
 		}
-		private void button_Connect_Click(object sender,EventArgs e)
+		private void button_Connect_Click(object sender,System.EventArgs e)
 		{
 			if(disconnectPropertySetsServer())
 			{
@@ -73,7 +66,7 @@ namespace HFDMwithCSharpByHarryZhang
 			}
 			else
 			{
-				MessageBox.Show("Unable to connect "+currentPropertySetsServerUrl.url);
+				System.Windows.Forms.MessageBox.Show("Unable to connect "+currentPropertySetsServerUrl.url);
 				disconnectPropertySetsServer();
 				button_Connect.Enabled=true;
 			}

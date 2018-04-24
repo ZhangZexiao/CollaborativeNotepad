@@ -1,18 +1,16 @@
 ﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Timers;
 namespace HFDMwithCSharpByHarryZhang
 {
 	class OAuth2TwoLeggedRequests
 	{
 		private System.IO.StreamWriter sessionLogger;
-		private Lynx.CollaborationClient.AuthenticationToken twoLeggedBearerToken;
+		private void Log(string log)
+		{
+			sessionLogger?.Log(log);
+		}
+		private BearerToken twoLeggedBearerToken;
 		private string apigeeHostUrl,clientId,clientSecret,scope;
-		private Timer timer;
+		private System.Timers.Timer timer;
 		public OAuth2TwoLeggedRequests(string apigeeHostUrl,string clientId,string clientSecret,string scope,System.IO.StreamWriter sessionLogger)
 		{
 			this.sessionLogger=sessionLogger;
@@ -21,30 +19,30 @@ namespace HFDMwithCSharpByHarryZhang
 			this.clientSecret=clientSecret;
 			this.scope=scope;
 			twoLeggedBearerToken=getTwoLeggedBearerToken(clientId,clientSecret,scope);
-			timer=new Timer(twoLeggedBearerToken.m_expiresIn*1000);
+			timer=new System.Timers.Timer(twoLeggedBearerToken.ExpiresIn*1000);
 			timer.Elapsed+=Timer_Elapsed;
 			timer.Enabled=true;
 		}
-		private void Timer_Elapsed(object sender,ElapsedEventArgs e)
+		private void Timer_Elapsed(object sender,System.Timers.ElapsedEventArgs e)
 		{
-			sessionLogger.Log("refresh two legged bearer token");
+			Log("refresh two legged bearer token");
 			twoLeggedBearerToken=getTwoLeggedBearerToken(clientId,clientSecret,scope);
 			timer.Enabled=false;
-			timer.Interval=twoLeggedBearerToken.m_expiresIn*1000;
+			timer.Interval=twoLeggedBearerToken.ExpiresIn*1000;
 			timer.Enabled=true;
 		}
-		private Lynx.CollaborationClient.AuthenticationToken getTwoLeggedBearerToken(string clientId,string clientSecret,string scope)
+		private BearerToken getTwoLeggedBearerToken(string clientId,string clientSecret,string scope)
 		{
 			var authTokenRequest=new Lynx.CollaborationClient.AuthTokenRequest(clientId,clientSecret,"","",scope);
 			return getTwoLeggedBearerToken(authTokenRequest);
 		}
-		private Lynx.CollaborationClient.AuthenticationToken getTwoLeggedBearerToken(Lynx.CollaborationClient.AuthTokenRequest request)
+		private BearerToken getTwoLeggedBearerToken(Lynx.CollaborationClient.AuthTokenRequest request)
 		{
 			//POST https://developer.api.autodesk.com/authentication/v1/authenticate
 			string endpoint=apigeeHostUrl+"/authentication/v1/authenticate";
-			sessionLogger.Log("oauth2, get two legged bearer token, request endpoint: "+endpoint);
+			Log("oauth2, get two legged bearer token, request endpoint: "+endpoint);
 			string body="client_id="+request.m_clientId+"&client_secret="+request.m_clientSecret+"&grant_type=client_credentials"+"&scope="+Nancy.Helpers.HttpUtility.UrlEncode(request.m_scope);
-			sessionLogger.Log("oauth2, get two legged bearer token, request body(form url encoded): "+body);
+			Log("oauth2, get two legged bearer token, request body(form url encoded): "+body);
 			string response;
 			using(var client=new System.Net.WebClient())
 			{
@@ -52,10 +50,10 @@ namespace HFDMwithCSharpByHarryZhang
 				response=client.UploadString(endpoint,"POST",body);
 			}
 			var jsonObject=Newtonsoft.Json.Linq.JObject.Parse(response);
-			sessionLogger.Log("oauth2, get two legged bearer token, response: "+jsonObject.ToString());
-			return new Lynx.CollaborationClient.AuthenticationToken()
+			Log("oauth2, get two legged bearer token, response: "+jsonObject.ToString());
+			return new BearerToken()
 			{
-				m_accessToken=jsonObject["access_token"].Value<string>(),m_tokenType=jsonObject["token_type"].Value<string>(),m_expiresIn=jsonObject["expires_in"].Value<uint>()
+				AccessToken=jsonObject["access_token"].Value<string>(),TokenType=jsonObject["token_type"].Value<string>(),ExpiresIn=jsonObject["expires_in"].Value<uint>()
 			};
 		}
 		private string downloadString(string endpoint)
@@ -63,22 +61,22 @@ namespace HFDMwithCSharpByHarryZhang
 			string result;
 			using(var client=new System.Net.WebClient())
 			{
-				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.m_accessToken;
+				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.AccessToken;
 				try
 				{
 					result=client.DownloadString(apigeeHostUrl+endpoint);
 				}
-				catch(Exception e)
+				catch(System.Exception e)
 				{
 					result= $"{{\"exception\":\"{e.Message}\", \"endpoint\":\"{apigeeHostUrl + endpoint}\"}}";
-					sessionLogger.Log(result.ToPrettyJsonString());
+					Log(result.ToPrettyJsonString());
 				}
 			}
 			return result;
 		}
 		public string GetBearerToken()
 		{
-			return twoLeggedBearerToken.m_accessToken;
+			return twoLeggedBearerToken.AccessToken;
 		}
 		public string CreateBucket(string bucketKey)
 		{
@@ -86,7 +84,7 @@ namespace HFDMwithCSharpByHarryZhang
 			string result;
 			using(var client=new System.Net.WebClient())
 			{
-				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.m_accessToken;
+				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.AccessToken;
 				client.Headers[System.Net.HttpRequestHeader.ContentType]="application/json";
 				var jsonObject=new
 				{
@@ -97,10 +95,10 @@ namespace HFDMwithCSharpByHarryZhang
 				{
 					result=client.UploadString(apigeeHostUrl+"/oss/v2/buckets","POST",jsonString);
 				}
-				catch(Exception e)
+				catch(System.Exception e)
 				{
 					result= $"{{\"exception\":\"{e.Message}\"}}";
-					sessionLogger.Log(result.ToPrettyJsonString());
+					Log(result.ToPrettyJsonString());
 				}
 			}
 			return result.ToPrettyJsonString();
@@ -121,16 +119,16 @@ namespace HFDMwithCSharpByHarryZhang
 			string result;
 			using(var client=new System.Net.WebClient())
 			{
-				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.m_accessToken;
+				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.AccessToken;
 				try
 				{
 					var bytes=client.UploadFile(apigeeHostUrl+"/oss/v2/buckets/"+bucketKey+"/objects/"+System.IO.Path.GetFileName(filePath),"PUT",filePath);
 					result=System.Text.Encoding.ASCII.GetString(bytes);
 				}
-				catch(Exception e)
+				catch(System.Exception e)
 				{
 					result= $"{{\"exception\":\"{e.Message}\"}}";
-					sessionLogger.Log(result.ToPrettyJsonString());
+					Log(result.ToPrettyJsonString());
 				}
 			}
 			return result.ToPrettyJsonString();
@@ -141,7 +139,7 @@ namespace HFDMwithCSharpByHarryZhang
 			string result;
 			using(var client=new System.Net.WebClient())
 			{
-				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.m_accessToken;
+				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+twoLeggedBearerToken.AccessToken;
 				client.Headers[System.Net.HttpRequestHeader.ContentType]="application/json";
 				var jsonObject=new
 				{
@@ -164,15 +162,15 @@ namespace HFDMwithCSharpByHarryZhang
 					}
 				};
 				var jsonString=Newtonsoft.Json.JsonConvert.SerializeObject(jsonObject);
-				sessionLogger.Log("post model derivative job, request: "+jsonString);
+				Log("post model derivative job, request: "+jsonString);
 				try
 				{
 					result=client.UploadString(apigeeHostUrl+"/modelderivative/v2/designdata/job","POST",jsonString);
 				}
-				catch(Exception e)
+				catch(System.Exception e)
 				{
 					result= $"{{\"exception\":\"{e.Message}\"}}";
-					sessionLogger.Log(result.ToPrettyJsonString());
+					Log(result.ToPrettyJsonString());
 				}
 			}
 			return result.ToPrettyJsonString();

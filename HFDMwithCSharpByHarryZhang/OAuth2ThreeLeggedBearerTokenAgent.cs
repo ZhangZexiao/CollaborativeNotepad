@@ -1,17 +1,34 @@
 ﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 namespace HFDMwithCSharpByHarryZhang
 {
 	public class OAuth2ThreeLeggedBearerTokenAgent
 	{
 		private System.IO.StreamWriter sessionLogger;
-		public OAuth2ThreeLeggedBearerTokenAgent(System.IO.StreamWriter _sessionLogger)
+		private void Log(string log)
 		{
-			sessionLogger=_sessionLogger;
+			sessionLogger?.Log(log);
+		}
+		private BearerToken threeLeggedBearerToken;
+		private string apigeeHostUrl,clientId,clientSecret;
+		private System.Timers.Timer timer;
+		public OAuth2ThreeLeggedBearerTokenAgent(string apigeeHostUrl,string clientId,string clientSecret,string scope,string redirectUrl,System.IO.StreamWriter sessionLogger)
+		{
+			this.sessionLogger=sessionLogger;
+			this.apigeeHostUrl=apigeeHostUrl;
+			this.clientId=clientId;
+			this.clientSecret=clientSecret;
+			threeLeggedBearerToken=getThreeLeggedBearerToken(apigeeHostUrl,clientId,clientSecret,scope,redirectUrl);
+			timer=new System.Timers.Timer(threeLeggedBearerToken.ExpiresIn*1000);
+			timer.Elapsed+=Timer_Elapsed;
+			timer.Enabled=true;
+		}
+		private void Timer_Elapsed(object sender,System.Timers.ElapsedEventArgs e)
+		{
+			Log("refresh three legged bearer token");
+			threeLeggedBearerToken=refreshThreeLeggedBearerToken();
+			timer.Enabled=false;
+			timer.Interval=threeLeggedBearerToken.ExpiresIn*1000;
+			timer.Enabled=true;
 		}
 		//https://stackoverflow.com/questions/47375304/nancy-self-host-returns-404
 		public class AuthorizationCodeHelper
@@ -24,6 +41,7 @@ namespace HFDMwithCSharpByHarryZhang
 				{
 					Get["/"]=parameters=>
 					{
+						//error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create'
 						authorizationCode=Request.Query["code"];
 						eventWaitHandler.Set();
 						return authorizationCode;
@@ -32,6 +50,10 @@ namespace HFDMwithCSharpByHarryZhang
 			}
 			private string url,redirectUrl;
 			private System.IO.StreamWriter sessionLogger;
+			private void Log(string log)
+			{
+				sessionLogger?.Log(log);
+			}
 			public AuthorizationCodeHelper(string apigeeHost,string clientId,string scope,string redirectUrl,System.IO.StreamWriter sessionLogger)
 			{
 				//https://developer-stg.autodesk.com/en/docs/oauth/v2/reference/http/authorize-GET/
@@ -42,26 +64,26 @@ namespace HFDMwithCSharpByHarryZhang
 			private static System.Threading.EventWaitHandle eventWaitHandler;
 			public string GetAuthorizationCode()
 			{
-				using(var host=new Nancy.Hosting.Self.NancyHost(new Nancy.Hosting.Self.HostConfiguration(){UrlReservations={CreateAutomatically=true}},new Uri(redirectUrl)))
+				using(var host=new Nancy.Hosting.Self.NancyHost(new Nancy.Hosting.Self.HostConfiguration(){UrlReservations={CreateAutomatically=true}},new System.Uri(redirectUrl)))
 				{
 					host.Start();
 					eventWaitHandler=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.ManualReset);
-					sessionLogger.Log("launch operating system default web browser: "+url);
+					Log("launch operating system default web browser: "+url);
 					System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url));
 					eventWaitHandler.WaitOne();
-					sessionLogger.Log("authorization code: "+authorizationCode);
+					Log("authorization code: "+authorizationCode);
 					System.Threading.Thread.Sleep(1000);
 				}
 				return authorizationCode;
 			}
 		}
-		private Lynx.CollaborationClient.AuthenticationToken getThreeLeggedBearerToken(string apigeeHost,Lynx.CollaborationClient.AuthTokenRequest request)
+		private BearerToken getThreeLeggedBearerToken(string apigeeHostUrl,string clientId,string clientSecret,string scope,string redirectUrl)
 		{
 			//https://developer-stg.autodesk.com/en/docs/oauth/v2/reference/http/gettoken-POST/
-			string endpoint=apigeeHost+"/authentication/v1/gettoken";
-			sessionLogger.Log("oauth2, get three legged bearer token, request endpoint: "+endpoint);
-			string body="client_id="+request.m_clientId+"&client_secret="+request.m_clientSecret+"&grant_type=authorization_code"+"&code="+request.m_code+"&redirect_uri="+request.m_callbackUrl;
-			sessionLogger.Log("oauth2, get three legged bearer token, request body(form url encoded): "+body);
+			string endpoint=apigeeHostUrl+"/authentication/v1/gettoken";
+			Log("oauth2, get three legged bearer token, request endpoint: "+endpoint);
+			string body="client_id="+clientId+"&client_secret="+clientSecret+"&grant_type=authorization_code"+"&code="+new AuthorizationCodeHelper(apigeeHostUrl,clientId,scope,redirectUrl,sessionLogger).GetAuthorizationCode()+"&redirect_uri="+redirectUrl;
+			Log("oauth2, get three legged bearer token, request body(form url encoded): "+body);
 			string response;
 			using(var client=new System.Net.WebClient())
 			{
@@ -69,18 +91,35 @@ namespace HFDMwithCSharpByHarryZhang
 				response=client.UploadString(endpoint,"POST",body);
 			}
 			var jsonObject=Newtonsoft.Json.Linq.JObject.Parse(response);
-			sessionLogger.Log("oauth2, get three legged bearer token, response: "+jsonObject.ToString());
-			return new Lynx.CollaborationClient.AuthenticationToken()
+			Log("oauth2, get three legged bearer token, response: "+jsonObject.ToString());
+			return new BearerToken()
 			{
-				m_accessToken=jsonObject["access_token"].Value<string>(),m_tokenType=jsonObject["token_type"].Value<string>(),m_expiresIn=jsonObject["expires_in"].Value<uint>(),m_refreshToken=jsonObject["refresh_token"].Value<string>()
+				AccessToken=jsonObject["access_token"].Value<string>(),TokenType=jsonObject["token_type"].Value<string>(),ExpiresIn=jsonObject["expires_in"].Value<uint>(),RefreshToken=jsonObject["refresh_token"].Value<string>()
 			};
 		}
-		public Lynx.CollaborationClient.BearerTokenExpirationHandler CreateThreeLeggedBearerTokenAgent(string apigeeHostUrl,string clientId,string clientSecret,string scope,string redirectUrl)
+		private BearerToken refreshThreeLeggedBearerToken()
 		{
-			var authTokenRequest=new Lynx.CollaborationClient.AuthTokenRequest(clientId,clientSecret,new AuthorizationCodeHelper(apigeeHostUrl,clientId,scope,redirectUrl,sessionLogger).GetAuthorizationCode(),redirectUrl);
-			var bearerTokenExpirationHandler=new Lynx.CollaborationClient.BearerTokenExpirationHandler(apigeeHostUrl,authTokenRequest);
-			bearerTokenExpirationHandler.setTokenResult(getThreeLeggedBearerToken(apigeeHostUrl,authTokenRequest));
-			return bearerTokenExpirationHandler;
+			//POST https://developer.api.autodesk.com/authentication/v1/refreshtoken
+			string endpoint=apigeeHostUrl+"/authentication/v1/refreshtoken";
+			Log("oauth2, refresh three legged bearer token, request endpoint: "+endpoint);
+			string body="client_id="+clientId+"&client_secret="+clientSecret+"&grant_type=refresh_token"+"&refresh_token="+threeLeggedBearerToken.RefreshToken;
+			Log("oauth2, refresh three legged bearer token, request body(form url encoded): "+body);
+			string response;
+			using(var client=new System.Net.WebClient())
+			{
+				client.Headers[System.Net.HttpRequestHeader.ContentType]="application/x-www-form-urlencoded";
+				response=client.UploadString(endpoint,"POST",body);
+			}
+			var jsonObject=Newtonsoft.Json.Linq.JObject.Parse(response);
+			Log("oauth2, refresh three legged bearer token, response: "+jsonObject.ToString());
+			return new BearerToken()
+			{
+				AccessToken=jsonObject["access_token"].Value<string>(),TokenType=jsonObject["token_type"].Value<string>(),ExpiresIn=jsonObject["expires_in"].Value<uint>(),RefreshToken=jsonObject["refresh_token"].Value<string>()
+			};
+		}
+		public string GetBearerToken()
+		{
+			return threeLeggedBearerToken.AccessToken;
 		}
 	}
 }

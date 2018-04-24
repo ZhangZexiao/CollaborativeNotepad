@@ -1,18 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Threading;
-namespace HFDMwithCSharpByHarryZhang
+﻿namespace HFDMwithCSharpByHarryZhang
 {
 	public partial class Form_CollaborativeNotepad:
-	Form
+	System.Windows.Forms.Form
 	{
 		public Form_CollaborativeNotepad()
 		{

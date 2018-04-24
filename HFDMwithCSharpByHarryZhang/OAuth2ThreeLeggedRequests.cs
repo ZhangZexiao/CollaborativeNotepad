@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-namespace HFDMwithCSharpByHarryZhang
+﻿namespace HFDMwithCSharpByHarryZhang
 {
 	class OAuth2ThreeLeggedRequests
 	{
-		private Lynx.CollaborationClient.BearerTokenExpirationHandler bearerTokenAgent;
+		private OAuth2ThreeLeggedBearerTokenAgent bearerTokenAgent;
 		private string apigeeHostUrl;
 		private System.IO.StreamWriter sessionLogger;
-		public OAuth2ThreeLeggedRequests(string apigeeHostUrl,Lynx.CollaborationClient.BearerTokenExpirationHandler bearerTokenAgent,System.IO.StreamWriter sessionLogger)
+		private void Log(string log)
+		{
+			sessionLogger?.Log(log);
+		}
+		public OAuth2ThreeLeggedRequests(string apigeeHostUrl,OAuth2ThreeLeggedBearerTokenAgent bearerTokenAgent,System.IO.StreamWriter sessionLogger)
 		{
 			this.bearerTokenAgent=bearerTokenAgent;
 			this.apigeeHostUrl=apigeeHostUrl;
@@ -21,15 +20,15 @@ namespace HFDMwithCSharpByHarryZhang
 			string result;
 			using(var client=new System.Net.WebClient())
 			{
-				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+bearerTokenAgent.getBearerToken();
+				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+bearerTokenAgent.GetBearerToken();
 				try
 				{
 					result=client.DownloadString(apigeeHostUrl+endpoint);
 				}
-				catch(Exception e)
+				catch(System.Exception e)
 				{
 					result= $"{{\"exception\":\"{e.Message}\", \"endpoint\":\"{apigeeHostUrl + endpoint}\"}}";
-					sessionLogger.Log(result.ToPrettyJsonString());
+					Log(result.ToPrettyJsonString());
 				}
 			}
 			return result;
@@ -64,17 +63,17 @@ namespace HFDMwithCSharpByHarryZhang
 			//GET https://developer-stg.api.autodesk.com/oss/v2/buckets/wip.dm.stg/objects/a5d72f9a-359a-4a6f-a226-6b740b04d290.rvt
 			using(var client=new System.Net.WebClient())
 			{
-				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+bearerTokenAgent.getBearerToken();
+				client.Headers[System.Net.HttpRequestHeader.Authorization]="Bearer "+bearerTokenAgent.GetBearerToken();
 				try
 				{
 					client.DownloadFile(apigeeHostUrl+"/oss/v2/buckets/"+bucketKey+"/objects/"+objectName,objectName);
 					return new System.IO.FileInfo(objectName).FullName;
 				}
-				catch(Exception e)
+				catch(System.Exception e)
 				{
 					var endpoint=apigeeHostUrl+"/oss/v2/buckets/"+bucketKey+"/objects/"+objectName;
 					var result= $"{{\"exception\":\"{e.Message}\",\"endpoint\":\"{endpoint}\"}}";
-					sessionLogger.Log(result.ToPrettyJsonString());
+					Log(result.ToPrettyJsonString());
 					return result.ToPrettyJsonString();
 				}
 			}

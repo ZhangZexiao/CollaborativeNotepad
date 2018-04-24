@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-namespace HFDMwithCSharpByHarryZhang
+﻿namespace HFDMwithCSharpByHarryZhang
 {
 	public partial class Form_CollaborativeNotepad:
-	Form
+	System.Windows.Forms.Form
 	{
 		System.IO.StreamWriter sessionLogger;
 		private void PrependUiLogger(string text)
